@@ -1,40 +1,87 @@
-/* Log Pose theme: night sea, parchment and straw-hat red */
+/* ============ Log Pose theme: a pirate ship's cabin ============
+   Dark ship wood, parchment, straw-hat gold and Luffy red, with a sea-green accent. */
 :root{
-  --night:#0B1E3A; --ultra:#16406b; --ultra-2:#0f2c4f;
-  --red:#D7263D; --thunder:#F2B630; --surf:#3FB6D9; --snow:#F6F0E1; --mist:#9fc3dd;
+  --night:#1a0f0a;        /* deck wood (background) */
+  --ultra:#4a2416;        /* raised panels */
+  --ultra-2:#2e170e;      /* sunken panels */
+  --red:#D7263D;          /* straw-hat band red: actions */
+  --thunder:#F4C84A;      /* straw gold: highlights */
+  --surf:#2EC4B6;         /* Grand Line sea green: links */
+  --snow:#FBF3E0;         /* text */
+  --mist:#d9bfa0;         /* secondary text */
   --paper:#F3E2B8; --ink:#2a1a0c;
-  --line:rgba(159,195,221,.2);
-  --holo:linear-gradient(115deg,#3FB6D9 0%,#F2B630 30%,#F3E2B8 50%,#3FB6D9 70%,#D7263D 100%);
+  --line:rgba(244,200,74,.16);
+  --holo:linear-gradient(115deg,#F4C84A 0%,#fff3c4 25%,#2EC4B6 50%,#F4C84A 75%,#D7263D 100%);
 }
+body{background:var(--night)}
 body::before{background-image:
-  radial-gradient(circle at 85% -10%,rgba(63,182,217,.22),transparent 45%),
-  radial-gradient(circle at -10% 45%,rgba(215,38,61,.14),transparent 40%),
-  repeating-radial-gradient(circle at 110% 120%,rgba(246,240,225,.035) 0 2px,transparent 2px 46px)}
-h1{font-family:"Pirata One",Fredoka,serif;font-weight:400;letter-spacing:.5px}
-.hello h1{font-size:34px}
-.dex-hero h1,.set-hero h1{font-size:32px}
-.wordmark{font-family:"Pirata One",serif;font-weight:400;font-size:26px;letter-spacing:.5px}
+  radial-gradient(ellipse at 50% -10%,rgba(244,200,74,.16),transparent 55%),
+  radial-gradient(ellipse at 50% 120%,rgba(0,0,0,.6),transparent 60%),
+  repeating-linear-gradient(90deg,rgba(0,0,0,.18) 0 2px,transparent 2px 96px),
+  repeating-linear-gradient(0deg,rgba(255,220,170,.025) 0 1px,transparent 1px 7px),
+  linear-gradient(#2a160d,#1a0f0a)}
+h1{font-family:"Pirata One",Fredoka,serif;font-weight:400;letter-spacing:.5px;color:var(--thunder);text-shadow:0 2px 0 #5a2a10}
+h2{color:var(--snow)}
+.hello h1{font-size:36px}
+.dex-hero h1,.set-hero h1{font-size:34px}
+.muted{color:var(--mist)}
 
-/* compass mark */
-.compass{width:28px;height:28px;flex:none;border-radius:50%;position:relative;display:inline-block;
-  background:radial-gradient(circle,#fff 0 12%,transparent 13%),conic-gradient(from 0deg,var(--red) 0 25%,var(--paper) 0 50%,var(--red) 0 75%,var(--paper) 0);
-  box-shadow:inset 0 0 0 3px #7a5a2a,0 0 0 2px var(--thunder)}
-.compass::after{content:"";position:absolute;left:50%;top:12%;width:4px;height:76%;margin-left:-2px;border-radius:2px;
-  background:linear-gradient(var(--red) 0 50%,#123 50%);animation:needle 6s ease-in-out infinite}
-@keyframes needle{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(18deg)}}
-.compass.big{width:96px;height:96px;box-shadow:inset 0 0 0 7px #7a5a2a,0 0 0 4px var(--thunder)}
-.compass.big::after{width:8px;margin-left:-4px}
-.compass.huge{width:130px;height:130px;box-shadow:inset 0 0 0 9px #7a5a2a,0 0 0 5px var(--thunder),0 20px 50px rgba(0,0,0,.5)}
-.compass.huge::after{width:10px;margin-left:-5px;animation-duration:1.4s}
-#splash{gap:18px}
-#splash .splash-word{font-family:"Pirata One",serif;font-size:44px;font-weight:400;color:var(--paper)}
-#splash.open .compass{transform:scale(1.4);opacity:0;transition:all .5s}
-@media (prefers-reduced-motion: reduce){.compass::after{animation:none}}
+/* bars */
+#topbar{background:linear-gradient(#3a1c10,#2a150d);border-bottom:2px solid #6b3a1c;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.wordmark{font-family:"Pirata One",serif;font-weight:400;font-size:28px;letter-spacing:.5px;color:var(--thunder);text-shadow:0 2px 0 #5a2a10}
+#tabbar{background:linear-gradient(#2a150d,#1c0e08);border-top:2px solid #6b3a1c}
+#tabbar a.on{background:#4a2416;color:var(--thunder)}
+#tabbar a.on svg{stroke:var(--thunder)}
+.controls{background:#24130b;border-bottom:1px solid var(--line)}
+.icon-btn{background:#4a2416;border:1.5px solid #6b3a1c;color:var(--paper)}
 
-/* set art: a small fan of the set's best cards */
+/* panels look like varnished wood with brass edges */
+.stat,.set-row,.hact,.panel,.trophy,.share-opt,.artist-row,.sf,.prog,.rel,.feature{border:1px solid rgba(244,200,74,.18)}
+.set-row,.panel,.hact,.share-opt{background:linear-gradient(160deg,#3d1f12,#2b160d)}
+.stat{background:linear-gradient(160deg,#3d1f12,#2b160d)}
+.stat.hot{background:linear-gradient(150deg,#D7263D,#8f1424);border-color:#ff6a7c}
+.prog,.rel{background:linear-gradient(160deg,#5a2c18,#2e170e)}
+.trainer{background:linear-gradient(150deg,#D7263D,#8f1424)}
+.seg{background:#1c0e08;border:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--surf);color:#0e2420}
+.seg.mode button[aria-pressed=true],.view-seg button[aria-pressed=true]{background:var(--thunder);color:#2a1a0c}
+.chip{background:#2e170e;border-color:var(--line);color:var(--mist)}
+.chip.gen[aria-pressed=true]{background:var(--thunder);border-color:var(--thunder);color:#2a1a0c}
+.track-btn{border-color:var(--thunder);color:var(--thunder)}
+.btn{box-shadow:0 5px 0 #7d1220}
+.btn:active{box-shadow:0 2px 0 #7d1220}
+.btn.ghost{background:#4a2416;box-shadow:0 5px 0 #24130b;color:var(--paper)}
+.search input{background:#2e170e;border:2px solid rgba(244,200,74,.14)}
+.search input:focus{border-color:var(--thunder)}
+.sheet{background:radial-gradient(ellipse at 50% 0%,rgba(244,200,74,.12),transparent 50%),rgba(20,10,6,.98)}
+.tile .face{background:#2e170e;border-radius:10px}
+.tile.owned .face{border-color:var(--thunder);box-shadow:0 0 0 1px rgba(244,200,74,.4),0 6px 16px rgba(0,0,0,.4)}
+.tile .stamp{background:var(--red);border-color:var(--paper)}
+.tile .num,.blabel{background:rgba(26,15,10,.85)}
+.vlabel{font:600 11px Fredoka,sans-serif;color:var(--thunder);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ring::before{background:#2e170e}
+.ring.big::before{background:var(--night)}
+.ring span{color:var(--snow)}
+.where{background:linear-gradient(160deg,#3d1f12,#2b160d);border:1px solid var(--line)}
+.complete-banner{background:linear-gradient(90deg,var(--thunder),#ffe29a);color:#2a1a0c}
+.hint{background:rgba(46,23,14,.6);border-color:rgba(244,200,74,.2)}
+.toast{background:#4a2416;border:1px solid var(--thunder);color:var(--snow)}
+
+/* straw hat mark and ship's wheel spinner */
+.compass{display:inline-block;flex:none;width:36px;height:36px;background:url(hat.svg) center/contain no-repeat}
+.compass.big{width:110px;height:110px}
+.compass.huge{width:160px;height:160px;filter:drop-shadow(0 16px 30px rgba(0,0,0,.6));animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-8px) rotate(-5deg)}}
+.spin{width:52px;height:52px;border:0;border-radius:0;background:url(wheel.svg) center/contain no-repeat;animation:roll 1.6s linear infinite}
+#splash{background:radial-gradient(ellipse at 50% 40%,#4a2416,#140a06 70%);gap:14px}
+#splash .splash-word{font-family:"Pirata One",serif;font-size:52px;font-weight:400;color:var(--thunder);text-shadow:0 3px 0 #5a2a10}
+#splash.open .compass{transform:translateY(-60vh) rotate(-30deg);opacity:0;transition:all .6s ease-in}
+@media (prefers-reduced-motion: reduce){.compass.huge{animation:none}}
+
+/* set art: a fan of the set's best cards */
 .fan{position:relative;display:block;width:84px;height:52px}
-.fan img{position:absolute;bottom:0;left:50%;width:34px;aspect-ratio:63/88;object-fit:cover;border-radius:4px;box-shadow:0 4px 10px rgba(0,0,0,.45);
-  transform-origin:50% 100%;transform:translateX(-50%) rotate(calc((var(--i) - 1) * 14deg)) translateY(calc(var(--i) * 0px))}
+.fan img{position:absolute;bottom:0;left:50%;width:34px;aspect-ratio:63/88;object-fit:cover;border-radius:4px;box-shadow:0 4px 10px rgba(0,0,0,.5);
+  transform-origin:50% 100%;transform:translateX(-50%) rotate(calc((var(--i) - 1) * 14deg))}
 .fan img:nth-child(2){z-index:2}
 .rel .fan,.prog .fan{width:110px;height:64px}
 .rel .fan img,.prog .fan img{width:42px}
@@ -42,25 +89,47 @@ h1{font-family:"Pirata One",Fredoka,serif;font-weight:400;letter-spacing:.5px}
 .hero-fan .fan img{width:62px;transform:translateX(calc(-50% + (var(--i) - 1) * 26px)) rotate(calc((var(--i) - 1) * 12deg))}
 .so-art .fan{width:72px;height:44px}.so-art .fan img{width:28px}
 .set-row .art{height:56px}
-.set-badge{display:inline-grid;place-items:center;min-width:64px;height:40px;padding:0 10px;border-radius:10px;font:700 15px/1 Fredoka,sans-serif;color:#fff;
-  background:linear-gradient(135deg,hsl(var(--h) 60% 45%),hsl(calc(var(--h) + 40) 65% 32%));box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 6px 14px rgba(0,0,0,.3)}
+.set-badge{display:inline-grid;place-items:center;min-width:64px;height:40px;padding:0 10px;border-radius:6px;font:700 15px/1 Fredoka,sans-serif;color:#2a1a0c;
+  background:linear-gradient(135deg,#F3E2B8,#d9bd80);box-shadow:inset 0 0 0 2px #8a5a2a,0 6px 14px rgba(0,0,0,.4);transform:rotate(-2deg)}
 
 /* cards */
-.vlabel{font:600 11px Fredoka,sans-serif;color:var(--thunder);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tile .face{border-radius:10px}
 img.broken{opacity:.15!important}
-.own-big{display:block;width:100%;margin-top:14px;font:600 18px Fredoka,sans-serif;padding:14px;border-radius:999px;background:var(--ultra);border:2px solid var(--paper);color:var(--paper)}
+.own-big{display:block;width:100%;margin-top:14px;font:600 18px Fredoka,sans-serif;padding:14px;border-radius:999px;background:#4a2416;border:2px solid var(--thunder);color:var(--thunder)}
 .own-big.on{background:var(--red);border-color:var(--red);color:#fff}
 .ctext{margin:0;line-height:1.5;color:var(--snow);font-weight:600}
 .hit .sub{display:block;font-size:11px;color:var(--mist);font-weight:700}
+.hits-head h2,.block-head h2{font-family:"Pirata One",Fredoka,serif;font-weight:400;font-size:26px;color:var(--thunder)}
+.hit-group h3{color:var(--paper)}
+
+/* ===== The brag piece: your own WANTED poster ===== */
+.my-poster{position:relative;display:grid;grid-template-columns:1fr;justify-items:center;text-align:center;margin:6px auto 22px;max-width:360px;
+  padding:18px 20px 16px;color:var(--ink);border-radius:4px;cursor:pointer;
+  background:radial-gradient(circle at 30% 15%,#fdf3d6,#f0dca7 55%,#ddc184 100%);
+  box-shadow:0 18px 40px rgba(0,0,0,.55),inset 0 0 40px rgba(122,78,30,.35),inset 0 0 0 2px rgba(122,78,30,.35);transform:rotate(-1.2deg)}
+.my-poster::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:4px;opacity:.35;
+  background:repeating-linear-gradient(8deg,transparent 0 9px,rgba(122,78,30,.12) 9px 10px)}
+.my-poster .w{font-family:"Pirata One",serif;font-size:58px;line-height:.9;letter-spacing:2px}
+.my-poster .photo{width:72%;aspect-ratio:4/3;margin:8px 0;border:3px solid #5a3a14;background:#cbb07a center/cover;filter:sepia(.55) contrast(1.05);overflow:hidden}
+.my-poster .photo img{width:100%;height:100%;object-fit:cover;object-position:50% 22%}
+.my-poster .photo .compass{width:60%;height:100%;margin:auto;display:block;filter:sepia(.3)}
+.my-poster .doa{font-family:"Pirata One",serif;font-size:20px;letter-spacing:3px}
+.my-poster .nm{font-family:"Pirata One",serif;font-size:42px;line-height:1;margin:2px 0 4px;word-break:break-word}
+.my-poster .berry{font:700 30px/1.1 Georgia,serif;letter-spacing:1px}
+.my-poster .berry b{font-family:Georgia,serif}
+.my-poster .rank{margin-top:6px;font:700 13px Fredoka,sans-serif;background:#2a1a0c;color:var(--thunder);padding:4px 12px;border-radius:999px}
+.my-poster .marine{position:absolute;right:12px;bottom:10px;font:700 10px Fredoka,sans-serif;opacity:.55;letter-spacing:1px}
+.my-poster.bump .berry{animation:berry .9s cubic-bezier(.2,1.6,.4,1)}
+@keyframes berry{30%{transform:scale(1.25);color:#b5121f}}
+.poster-tip{text-align:center;font-size:13px;font-weight:700;color:var(--mist);margin:-12px 0 20px}
 
 /* home: bounty board card */
-.dexcard{background:linear-gradient(150deg,#7a1424,#3a1222 70%)}
+.dexcard{background:linear-gradient(150deg,#7a1424,#3a1222 70%);border:1px solid rgba(244,200,74,.25)}
+.dexcard .dk{color:var(--thunder)}
 .poster-mini{font-family:"Pirata One",serif;font-size:20px;color:var(--ink);background:var(--paper);padding:14px 10px;border-radius:4px;transform:rotate(4deg);
   box-shadow:0 6px 14px rgba(0,0,0,.4),inset 0 0 0 2px rgba(122,90,42,.5)}
 
-/* bounty posters */
-.poster .dpic{background:var(--paper);border-radius:6px}
+/* bounty posters on the board */
+.poster .dpic{background:var(--paper);border-radius:4px}
 .wanted{position:absolute;inset:0;display:grid;grid-template-rows:auto 1fr auto auto;justify-items:center;padding:6px 6px 8px;color:var(--ink);text-align:center;
   background:radial-gradient(circle at 30% 20%,#fbf0d0,#e9d29c 70%,#d9bd80)}
 .wanted b{font-family:"Pirata One",serif;font-weight:400;font-size:20px;letter-spacing:1px;line-height:1}
@@ -71,28 +140,43 @@ img.broken{opacity:.15!important}
 .wanted-big b{font-size:44px;font-weight:400}
 .wanted-big small{font:700 14px Nunito,sans-serif}
 .board-tools .gens{margin-bottom:12px}
+.dslot.st-got .dpic{box-shadow:0 0 0 2px var(--thunder)}
 
-/* binder cover */
-.bcover{background:radial-gradient(circle at 70% 25%,rgba(255,255,255,.12),transparent 45%),linear-gradient(140deg,#6b3b1a,#3d220f 60%,#2a1709)}
-.bcover::before{border-color:rgba(242,182,48,.55)}
+/* binder: a leather ship's log */
+.bsheet{background:linear-gradient(90deg,rgba(0,0,0,.35),transparent 6%),#24130b;box-shadow:inset 0 0 0 4px #140a06,0 10px 24px rgba(0,0,0,.5)}
+.bcover{background:radial-gradient(circle at 70% 25%,rgba(255,255,255,.1),transparent 45%),linear-gradient(140deg,#6b3b1a,#3d220f 60%,#2a1709)}
+.bcover::before{border-color:rgba(244,200,74,.55)}
 .bc-in .bc-card{max-width:46%;max-height:none;aspect-ratio:63/88;object-fit:cover;border-radius:8px;transform:rotate(-4deg);box-shadow:0 12px 26px rgba(0,0,0,.55)}
 .bc-in h3{font-family:"Pirata One",serif;font-weight:400;font-size:34px;color:var(--paper)}
+.bc-open{background:var(--thunder);color:#2a1a0c}
 
-/* reveal back */
-.rv-back{background:radial-gradient(circle,#1d5a8f,#0B1E3A);border-color:var(--thunder)}
+/* the big pull */
+.reveal{background:radial-gradient(circle at 50% 45%,rgba(244,200,74,.3),rgba(20,10,6,.97) 62%)}
+.reveal.tier2{background:radial-gradient(circle at 50% 45%,rgba(215,38,61,.45),rgba(20,10,6,.97) 62%)}
+.rv-rays{background:repeating-conic-gradient(from 0deg,rgba(244,200,74,.14) 0 8deg,transparent 8deg 22deg)}
+.rv-kicker{font-family:"Pirata One",serif;font-weight:400;font-size:64px;color:var(--thunder);text-shadow:0 4px 0 #7d1220,0 0 30px rgba(215,38,61,.6);letter-spacing:2px;transform:scale(.4) rotate(-8deg)}
+.reveal.go .rv-kicker{transform:rotate(-4deg)}
+.rv-back{background:radial-gradient(circle,#7a3b1e,#2a150d);border:8px solid var(--thunder)}
+.rv-back .compass{width:120px;height:120px}
+.rv-front{box-shadow:0 0 0 2px rgba(244,200,74,.8),0 0 70px rgba(244,200,74,.55)}
+.rv-sparks i{box-shadow:0 0 12px #fff,0 0 22px var(--thunder)}
+.rv-berry{position:relative;font:700 24px Georgia,serif;color:var(--thunder);opacity:0;transform:translateY(10px);transition:all .5s 1.3s}
+.reveal.go .rv-berry{opacity:1;transform:none}
+
+/* badges */
+.medal{background:radial-gradient(circle at 35% 30%,#fff6c9,#F4C84A 45%,#b07d10)}
+.medal.locked{background:radial-gradient(circle at 35% 30%,#6b3a1c,#3a1c10)}
+.trophy.won{background:linear-gradient(160deg,rgba(244,200,74,.2),rgba(255,255,255,.03));border-color:rgba(244,200,74,.5)}
+.bp-card{background:linear-gradient(170deg,#5a2c18,#2e170e);border-color:var(--line)}
+.bp-card h3{font-family:"Pirata One",serif;font-weight:400;font-size:34px;color:var(--thunder)}
+.tbar i,.bp-bar i{background:var(--thunder)}
+
+/* misc */
 .link-btn{background:none;border:0;padding:0;font:inherit;color:var(--surf);text-decoration:underline}
 .welcome{text-align:center;padding-top:40px}.welcome .panel{text-align:left;margin:18px 0}
-.welcome h2{font-family:"Pirata One",serif;font-weight:400;font-size:38px;margin-top:14px}
+.welcome h2{font-family:"Pirata One",serif;font-weight:400;font-size:42px;margin-top:14px;color:var(--thunder)}
 #setBtn{margin-left:auto}
 .settings .panel .btn{margin-top:6px}
 .btn.danger{color:#ff9aa6}
 .panel.warn{border:2px solid var(--thunder)}
-
-/* One Piece marks: straw hat logo, ship's wheel spinner (replaces the old round marks) */
-.compass{border-radius:0;background:url(hat.svg) center/contain no-repeat;box-shadow:none!important;width:34px;height:34px}
-.compass::after{display:none}
-.compass.big{width:110px;height:110px}
-.compass.huge{width:150px;height:150px;filter:drop-shadow(0 16px 30px rgba(0,0,0,.5));animation:bob 2.4s ease-in-out infinite}
-@keyframes bob{50%{transform:translateY(-8px) rotate(-4deg)}}
-.spin{border:0!important;border-radius:0;background:url(wheel.svg) center/contain no-repeat!important}
-.rv-back .compass{width:120px;height:120px}
+.share-opt[aria-pressed=true]{border-color:var(--thunder);background:linear-gradient(160deg,#6a3420,#3d1f12)}

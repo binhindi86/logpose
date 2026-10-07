@@ -109,6 +109,27 @@ function hitRank(c) {
   if (c.rarity === 'SR') return 4;
   return -1;
 }
+/* ---------- Bounty: every card adds berries to your WANTED poster (just for fun) ---------- */
+function berryOf(c) { // in millions
+  const r = hitRank(c);
+  if (r === 0) return 300; if (r === 1) return 150; if (r === 2) return 80; if (r === 3) return 40;
+  return { L: 20, SR: 15, R: 5, UC: 2, C: 1 }[c.rarity] || 1;
+}
+const RANKS = [[3000, 'Pirate King'], [1000, 'Emperor of the Sea'], [300, 'Warlord of the Sea'], [100, 'Supernova'], [10, 'Rising Rookie'], [0, 'Rookie']];
+function bountyM() { let m = 0; for (const s in owned) for (const id in owned[s]) m += +owned[s][id] || 1; return m + Object.values(board).filter(v => v.st === 'got').length * 25; }
+const rankOf = m => RANKS.find(([min]) => m >= min)[1];
+const berry = m => '฿ ' + (m * 1e6).toLocaleString('en-US') + '-';
+function posterHTML() {
+  const m = bountyM(), best = prefs.best;
+  return `<button type="button" class="my-poster" id="myPoster" aria-label="My wanted poster: bounty ${berry(m)}">
+    <span class="w">WANTED</span>
+    <span class="photo">${best && best.img ? `<img src="${esc(best.img)}" alt="">` : '<span class="compass"></span>'}</span>
+    <span class="doa">DEAD OR ALIVE</span>
+    <span class="nm">${esc(prefs.trainer || 'Captain')}</span>
+    <span class="berry" id="berryVal">${berry(m)}</span>
+    <span class="rank">${esc(rankOf(m))}</span>
+    <span class="marine">LOG POSE</span></button>`;
+}
 const KIND_NAME = { op: 'Booster sets', eb: 'Extra & premium boosters', st: 'Starter decks', promo: 'Promos' };
 async function loadCatalog() {
   const [boosters, decks] = await Promise.all([api('allSets/', 24), api('allDecks/', 24).catch(() => [])]);
@@ -209,6 +230,8 @@ async function renderHome(id) {
   const chaseList = Object.entries(chase);
   view.innerHTML = `
     <div class="hello"><h1>${esc(greet)}</h1><p>${cards ? `Your binder holds ${cards} card${cards === 1 ? '' : 's'} so far.` : 'Pick a set and start ticking the cards you own.'}</p></div>
+    ${posterHTML()}
+    <p class="poster-tip">Your bounty rises with every card you tick. Tap the poster to share it.</p>
     <div class="stats">
       <div class="stat hot"><b>${cards}</b><span>cards collected</span></div>
       <div class="stat"><b>${ids.length}</b><span>sets started</span></div>
@@ -238,6 +261,9 @@ async function renderHome(id) {
     <section class="block" id="newest"><div class="block-head"><h2>Newest sets</h2><a href="#/sets" data-tab>All sets</a></div>${loading('Loading sets…')}</section>`;
   view.querySelectorAll('a.chase').forEach(a => a.addEventListener('click', () => { openAfterLoad = a.dataset.card; }, true));
   $('#shareHome').onclick = () => openSharePicker('all');
+  $('#myPoster').onclick = () => openSharePicker('poster');
+  { const now = bountyM(), was = prefs.lastBounty ?? now; prefs.lastBounty = now; savePrefs();
+    if (now > was && !reduced()) { const el = $('#berryVal'), t0 = performance.now(), d = 1400; const step = t => { const k = Math.min(1, (t - t0) / d), e = 1 - Math.pow(1 - k, 3); el.textContent = berry(Math.round(was + (now - was) * e)); if (k < 1) requestAnimationFrame(step); else $('#myPoster').classList.add('bump'); }; requestAnimationFrame(step); } }
   view.querySelector('.trophies')?.addEventListener('click', e => { const b = e.target.closest('[data-badge]'); if (b) showBadge(b.dataset.badge); });
   restoreScroll();
   try {
@@ -325,7 +351,7 @@ function refreshTile(c) {
 function setOwned(c, on, opts = {}) {
   const before = tally(); const wasDone = before.total && before.have >= before.total;
   const b = owned[S.set.id] || (owned[S.set.id] = {});
-  if (on) b[c.id] = 1; else delete b[c.id];
+  if (on) { b[c.id] = berryOf(c); if (!prefs.best || berryOf(c) > (prefs.best.pts || 0)) { prefs.best = { img: c.img, pts: berryOf(c), name: c.name }; savePrefs(); } } else delete b[c.id];
   if (!Object.keys(b).length) delete owned[S.set.id];
   saveOwned();
   const el = refreshTile(c);
@@ -344,6 +370,7 @@ async function renderSet(id, setId) {
   if (S.set?.id !== setId) { S.q = ''; S.filter = 'all'; }
   S.set = set; S.mode = prefs.modes[setId] || 'set';
   rememberSet(set);
+  { const o = owned[setId]; if (o) { let ch = false; set.cards.forEach(c => { if (o[c.id] && o[c.id] !== berryOf(c)) { o[c.id] = berryOf(c); ch = true; } if (o[c.id] && (!prefs.best || berryOf(c) > (prefs.best.pts || 0))) { prefs.best = { img: c.img, pts: berryOf(c), name: c.name }; savePrefs(); } }); if (ch) saveOwned(); } }
   prefs.recent = [setId, ...(prefs.recent || []).filter(k => k !== setId)].slice(0, 20); savePrefs();
   const base = set.cards.filter(c => !c.variant).length, vars = set.cards.length - base;
   view.innerHTML = `
@@ -505,13 +532,13 @@ function openCard(c) {
 }
 
 /* ---------- Card reveal ---------- */
-function reveal({ pic, name, line, tier, kicker }) {
+function reveal({ pic, name, line, tier, kicker, berries }) {
   if (reduced()) { confetti(); toast(`${kicker || 'Big pull!'} ${name}`); return; }
   let el = $('#reveal'); if (!el) { el = document.createElement('div'); el.id = 'reveal'; document.body.appendChild(el); }
   el.className = 'reveal tier' + tier;
-  el.innerHTML = `<div class="rv-rays" aria-hidden="true"></div><div class="rv-kicker">${esc(kicker || (tier === 2 ? 'Legendary pull!' : 'Big pull!'))}</div>
+  el.innerHTML = `<div class="rv-rays" aria-hidden="true"></div><div class="rv-kicker">${esc(kicker || (tier === 2 ? 'DON!!' : 'Big pull!'))}</div>
     <div class="rv-card"><div class="rv-inner"><div class="rv-back" aria-hidden="true"><span class="compass big"></span></div><div class="rv-front">${pic ? `<img src="${esc(pic)}" alt="${esc(name)}">` : ''}<span class="rv-shine" aria-hidden="true"></span></div></div></div>
-    <div class="rv-name">${esc(name)}</div><div class="rv-line">${esc(line || '')}</div><div class="rv-tap">Tap anywhere to close</div>
+    <div class="rv-name">${esc(name)}</div><div class="rv-line">${esc(line || '')}</div>${berries ? `<div class="rv-berry">+ ${berry(berries)} bounty</div>` : ''}<div class="rv-tap">Tap anywhere to close</div>
     <div class="rv-sparks" aria-hidden="true">${Array.from({ length: 26 }, (_, i) => `<i style="--a:${i * 360 / 26}deg;--d:${120 + (i * 53) % 140}px;--t:${(i % 5) * .06}s"></i>`).join('')}</div>`;
   el.hidden = false; requestAnimationFrame(() => el.classList.add('go')); buzz('win');
   setTimeout(() => { if (el.classList.contains('go')) confetti(); }, 900);
@@ -520,7 +547,7 @@ function reveal({ pic, name, line, tier, kicker }) {
 function onCardAdded(c) {
   const r = hitRank(c);
   if (r >= 0 && r <= 3) {
-    reveal({ pic: c.img, name: c.name, line: `${S.set.name} ${c.base}${c.label ? ' – ' + c.label : ''}`, tier: r <= 1 ? 2 : 1 });
+    reveal({ pic: c.img, name: c.name, line: `${S.set.name} ${c.base}${c.label ? ' – ' + c.label : ''}`, tier: r <= 1 ? 2 : 1, berries: berryOf(c) });
     unlock(r === 0 ? 'first-manga' : r === 1 ? 'first-sp' : r === 2 ? 'first-sec' : 'first-alt');
   }
   if (c.rarity === 'L') unlock('first-leader');
@@ -543,8 +570,10 @@ const BADGES = [
   { id: 'chase-hit', icon: '🎯', name: 'Chase complete', how: 'Tick a card from your chase list' },
   { id: 'board-10', icon: '📜', name: 'First bounties', how: 'Claim 10 characters on the Bounty Board' },
   { id: 'board-25', icon: '💰', name: 'Bounty hunter', how: 'Claim 25 characters' },
-  { id: 'board-50', icon: '🗡️', name: 'Supernova', how: 'Claim 50 characters' },
+  { id: 'board-50', icon: '🗡️', name: 'Worst Generation', how: 'Claim 50 characters' },
   { id: 'board-100', icon: '🌊', name: 'Warlord', how: 'Claim 100 characters' },
+  { id: 'bounty-100', icon: '💰', name: 'Supernova', how: 'Reach a 100,000,000 berry bounty' },
+  { id: 'bounty-1000', icon: '👒', name: 'Emperor', how: 'Reach a 1,000,000,000 berry bounty' },
   { id: 'set-half', icon: '🌓', name: 'Halfway', how: 'Reach 50% of any set' },
   { id: 'set-full', icon: '✅', name: 'Set complete', how: 'Complete a whole set' },
   { id: 'master-full', icon: '🏆', name: 'Master set', how: 'Complete every version of a set' },
@@ -553,7 +582,7 @@ function badgeProgress() {
   const cards = totalOwned(), b = Object.values(board).filter(v => v.st === 'got').length;
   const best = Math.max(0, ...collectingIds().map(k => Math.floor(progressOf(k, 'set').pct)));
   return { 'first-card': [cards, 1], 'cards-50': [cards, 50], 'cards-100': [cards, 100], 'cards-250': [cards, 250], 'cards-500': [cards, 500], 'cards-1000': [cards, 1000],
-    'board-10': [b, 10], 'board-25': [b, 25], 'board-50': [b, 50], 'board-100': [b, 100], 'set-half': [best, 50], 'set-full': [best, 100] };
+    'bounty-100': [bountyM(), 100], 'bounty-1000': [bountyM(), 1000], 'board-10': [b, 10], 'board-25': [b, 25], 'board-50': [b, 50], 'board-100': [b, 100], 'set-half': [best, 50], 'set-full': [best, 100] };
 }
 const badgeQueue = [];
 function unlock(id, quiet) {
@@ -658,7 +687,7 @@ function openBoardSheet(e) {
       const before = JSON.stringify(board[e.name] || null); const undo = () => { const b = JSON.parse(before); if (b) board[e.name] = b; else delete board[e.name]; saveBoard(); paint(); BX.repaint && BX.repaint(); };
       const x = board[e.name] || (board[e.name] = {});
       if (cb) { delete board[e.name]; toast(`${e.name} cleared`, { label: 'Undo', run: undo }); }
-      else if (sb) { const was = x.st || ''; x.st = sb.dataset.st; if (!x.st) { delete board[e.name]; toast(`${e.name} is wanted again`, { label: 'Undo', run: undo }); } else if (x.st === 'got' && was !== 'got') { const o = x.pick ? e.opts.find(y => y.id === x.pick) : null; reveal({ pic: o ? o.img : e.opts[0].img, name: e.name, line: o ? `${o.setLabel} ${o.base}${o.label ? ' – ' + o.label : ''}` : 'Claimed on your Bounty Board', tier: 1, kicker: 'Bounty claimed!' }); } else buzz(); }
+      else if (sb) { const was = x.st || ''; x.st = sb.dataset.st; if (!x.st) { delete board[e.name]; toast(`${e.name} is wanted again`, { label: 'Undo', run: undo }); } else if (x.st === 'got' && was !== 'got') { const o = x.pick ? e.opts.find(y => y.id === x.pick) : null; reveal({ pic: o ? o.img : e.opts[0].img, name: e.name, line: o ? `${o.setLabel} ${o.base}${o.label ? ' – ' + o.label : ''}` : 'Claimed on your Bounty Board', tier: 1, kicker: 'Bounty claimed!', berries: 25 }); } else buzz(); }
       else if (pb) { if (x.pick === pb.dataset.pick) { delete x.pick; if (x.st === 'picked') delete x.st; toast('Pick removed', { label: 'Undo', run: undo }); } else { x.pick = pb.dataset.pick; if (!x.st) x.st = 'picked'; buzz(); toast('Saved as your pick (Planned)'); } }
       if (board[e.name] && !board[e.name].st && !board[e.name].pick) delete board[e.name];
       saveBoard(); paint(); BX.repaint && BX.repaint(); checkBadges();
@@ -734,28 +763,52 @@ function startScan() {
 /* ---------- Share a picture ---------- */
 const loadImg = src => new Promise(res => { if (!src) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 function rr(x, X, Y, W, H, R) { x.beginPath(); x.moveTo(X + R, Y); x.arcTo(X + W, Y, X + W, Y + H, R); x.arcTo(X + W, Y + H, X, Y + H, R); x.arcTo(X, Y + H, X, Y, R); x.arcTo(X, Y, X + W, Y, R); x.closePath(); }
-async function drawShare({ title, sub, pct, stats, pics, rows }) {
+async function drawShare({ title, sub, pct, stats, pics, rows, foot }) {
   await document.fonts.ready;
   const n = rows ? Math.min(rows.length, 6) : 0, W = 1080, H = 1350 + n * 70;
   const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
-  const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#12355f'); g.addColorStop(.6, '#0B1E3A'); g.addColorStop(1, '#3a1222'); x.fillStyle = g; x.fillRect(0, 0, W, H);
-  x.strokeStyle = 'rgba(243,226,184,.06)'; x.lineWidth = 2; for (let i = 0; i < 14; i++) { x.beginPath(); x.arc(W * .8, H * .1, 120 + i * 90, 0, 7); x.stroke(); }
-  x.fillStyle = '#F2B630'; x.font = '40px "Pirata One", serif'; x.fillText('Log Pose', 70, 100);
-  x.fillStyle = '#F3E2B8'; x.font = '84px "Pirata One", serif'; x.fillText(title, 70, 200);
-  x.fillStyle = '#9fc3dd'; x.font = '600 34px Nunito, sans-serif'; x.fillText(sub, 70, 255);
+  const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#4a2416'); g.addColorStop(.6, '#24130b'); g.addColorStop(1, '#140a06'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  x.strokeStyle = 'rgba(244,200,74,.06)'; x.lineWidth = 2; for (let i = 0; i < 14; i++) { x.beginPath(); x.arc(W * .8, H * .1, 120 + i * 90, 0, 7); x.stroke(); }
+  x.fillStyle = '#F4C84A'; x.font = '44px "Pirata One", serif'; x.fillText('Log Pose', 70, 100);
+  x.fillStyle = '#F4C84A'; x.font = '84px "Pirata One", serif'; x.fillText(title, 70, 200);
+  x.fillStyle = '#d9bfa0'; x.font = '600 34px Nunito, sans-serif'; x.fillText(sub, 70, 255);
   const cx = W - 180, cy = 175, R = 95; x.lineWidth = 26; x.strokeStyle = 'rgba(255,255,255,.12)'; x.beginPath(); x.arc(cx, cy, R, 0, 7); x.stroke();
-  const rg = x.createLinearGradient(cx - R, cy - R, cx + R, cy + R); rg.addColorStop(0, '#3FB6D9'); rg.addColorStop(1, '#F2B630'); x.strokeStyle = rg; x.lineCap = 'round'; x.beginPath(); x.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + Math.max(.02, pct / 100) * Math.PI * 2); x.stroke();
+  const rg = x.createLinearGradient(cx - R, cy - R, cx + R, cy + R); rg.addColorStop(0, '#D7263D'); rg.addColorStop(1, '#F4C84A'); x.strokeStyle = rg; x.lineCap = 'round'; x.beginPath(); x.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + Math.max(.02, pct / 100) * Math.PI * 2); x.stroke();
   x.fillStyle = '#fff'; x.font = '700 50px Fredoka, sans-serif'; x.textAlign = 'center'; x.fillText(Math.round(pct) + '%', cx, cy + 17); x.textAlign = 'left';
-  stats.forEach((s, i) => { const X = 70 + i * 320; rr(x, X, 300, 300, 130, 22); x.fillStyle = i === 0 ? '#D7263D' : 'rgba(255,255,255,.08)'; x.fill(); x.fillStyle = '#fff'; x.font = '700 60px Fredoka, sans-serif'; x.fillText(String(s[0]), X + 28, 375); x.font = '600 28px Nunito, sans-serif'; x.fillStyle = i === 0 ? '#fff' : '#9fc3dd'; x.fillText(s[1], X + 28, 412); });
-  (rows || []).slice(0, 6).forEach((r, i) => { const Y = 480 + i * 70; x.fillStyle = '#fff'; x.font = '700 32px Fredoka, sans-serif'; x.fillText(r.name.length > 26 ? r.name.slice(0, 25) + '…' : r.name, 70, Y + 30); x.textAlign = 'right'; x.fillStyle = '#9fc3dd'; x.font = '600 28px Nunito, sans-serif'; x.fillText(`${r.have} / ${r.total}`, W - 70, Y + 30); x.textAlign = 'left'; rr(x, 70, Y + 42, W - 140, 12, 6); x.fillStyle = 'rgba(255,255,255,.12)'; x.fill(); if (r.total) { rr(x, 70, Y + 42, Math.max(12, (W - 140) * Math.min(1, r.have / r.total)), 12, 6); x.fillStyle = '#F2B630'; x.fill(); } });
+  stats.forEach((s, i) => { const X = 70 + i * 320; rr(x, X, 300, 300, 130, 22); x.fillStyle = i === 0 ? '#D7263D' : 'rgba(255,255,255,.08)'; x.fill(); x.fillStyle = '#fff'; x.font = '700 60px Fredoka, sans-serif'; x.fillText(String(s[0]), X + 28, 375); x.font = '600 28px Nunito, sans-serif'; x.fillStyle = i === 0 ? '#fff' : '#d9bfa0'; x.fillText(s[1], X + 28, 412); });
+  (rows || []).slice(0, 6).forEach((r, i) => { const Y = 480 + i * 70; x.fillStyle = '#fff'; x.font = '700 32px Fredoka, sans-serif'; x.fillText(r.name.length > 26 ? r.name.slice(0, 25) + '…' : r.name, 70, Y + 30); x.textAlign = 'right'; x.fillStyle = '#d9bfa0'; x.font = '600 28px Nunito, sans-serif'; x.fillText(`${r.have} / ${r.total}`, W - 70, Y + 30); x.textAlign = 'left'; rr(x, 70, Y + 42, W - 140, 12, 6); x.fillStyle = 'rgba(255,255,255,.12)'; x.fill(); if (r.total) { rr(x, 70, Y + 42, Math.max(12, (W - 140) * Math.min(1, r.have / r.total)), 12, 6); x.fillStyle = '#F4C84A'; x.fill(); } });
   const imgs = (await Promise.all(pics.slice(0, 16).map(loadImg))).filter(Boolean).slice(0, 8);
   const cw = 222, ch = 310, gap = 24, top = 480 + n * 70 + (n ? 20 : 0);
   imgs.forEach((im, i) => { const X = 70 + (i % 4) * (cw + gap), Y = top + Math.floor(i / 4) * (ch + gap); x.save(); rr(x, X, Y, cw, ch, 14); x.clip(); x.drawImage(im, X, Y, cw, ch); x.restore(); });
   if (!imgs.length) { x.fillStyle = 'rgba(255,255,255,.5)'; x.font = '600 34px Nunito, sans-serif'; x.fillText('Start ticking cards to fill this picture!', 70, top + 80); }
-  x.fillStyle = '#9fc3dd'; x.font = '600 28px Nunito, sans-serif'; x.fillText(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), 70, H - 60);
+  x.fillStyle = '#d9bfa0'; x.font = '600 28px Nunito, sans-serif'; x.fillText(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), 70, H - 60); if (foot) { x.textAlign = 'right'; x.fillStyle = '#F4C84A'; x.font = 'bold 34px Georgia, serif'; x.fillText(foot, W - 70, H - 60); x.textAlign = 'left'; }
+  try { return c.toDataURL('image/png'); } catch { return null; }
+}
+async function drawPoster() {
+  await document.fonts.ready;
+  const W = 1080, H = 1500, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+  x.fillStyle = '#1a0f0a'; x.fillRect(0, 0, W, H);
+  x.save(); x.translate(W / 2, H / 2); x.rotate(-0.015); x.translate(-W / 2, -H / 2);
+  const g = x.createRadialGradient(W * .3, H * .15, 50, W / 2, H / 2, H * .8); g.addColorStop(0, '#fdf3d6'); g.addColorStop(.55, '#f0dca7'); g.addColorStop(1, '#cdae6c');
+  x.fillStyle = g; x.fillRect(70, 60, W - 140, H - 120);
+  x.strokeStyle = 'rgba(122,78,30,.12)'; x.lineWidth = 1; for (let y = 70; y < H - 70; y += 11) { x.beginPath(); x.moveTo(70, y); x.lineTo(W - 70, y + 14); x.stroke(); }
+  x.fillStyle = '#2a1a0c'; x.textAlign = 'center';
+  x.font = '190px "Pirata One", serif'; x.fillText('WANTED', W / 2, 270);
+  const px = 190, py = 320, pw = W - 380, ph = 520; x.fillStyle = '#cbb07a'; x.fillRect(px, py, pw, ph);
+  const best = prefs.best && await loadImg(prefs.best.img);
+  if (best) { x.save(); x.beginPath(); x.rect(px, py, pw, ph); x.clip(); const sc = pw / best.width; x.filter = 'sepia(0.55) contrast(1.05)'; x.drawImage(best, px, py - best.height * sc * 0.08, pw, best.height * sc); x.restore(); x.filter = 'none'; }
+  else { const hat = await loadImg('hat.svg'); if (hat) x.drawImage(hat, px + pw / 2 - 200, py + ph / 2 - 200, 400, 400); }
+  x.strokeStyle = '#5a3a14'; x.lineWidth = 10; x.strokeRect(px, py, pw, ph);
+  x.fillStyle = '#2a1a0c'; x.font = '70px "Pirata One", serif'; x.fillText('DEAD OR ALIVE', W / 2, 950);
+  const name = (prefs.trainer || 'Captain').toUpperCase(); x.font = `${name.length > 10 ? 120 : 150}px "Pirata One", serif`; x.fillText(name, W / 2, 1110);
+  x.font = 'bold 84px Georgia, serif'; x.fillText(berry(bountyM()), W / 2, 1240);
+  x.fillStyle = '#2a1a0c'; const rk = rankOf(bountyM()); x.font = '600 44px Fredoka, sans-serif'; const tw = x.measureText(rk).width + 60; rr(x, W / 2 - tw / 2, 1290, tw, 70, 35); x.fill(); x.fillStyle = '#F4C84A'; x.fillText(rk, W / 2, 1340);
+  x.fillStyle = 'rgba(42,26,12,.55)'; x.font = '600 30px Fredoka, sans-serif'; x.textAlign = 'right'; x.fillText(`LOG POSE – ${totalOwned()} cards`, W - 100, H - 90);
+  x.restore();
   try { return c.toDataURL('image/png'); } catch { return null; }
 }
 async function makeShare(target) {
+  if (target === 'poster') return drawPoster();
   const ids = collectingIds(), cards = totalOwned();
   let bPics = []; const bGot = Object.values(board).filter(v => v.st === 'got').length;
   if (target === 'all' || target === 'board') { try { await loadBoard(); bPics = BOARD.filter(e => (board[e.name] || {}).st === 'got').map(boardPic).filter(Boolean); } catch {} }
@@ -765,7 +818,7 @@ async function makeShare(target) {
     const rows = ids.map(k => { const p = progressOf(k, prefs.modes[k] || 'set'); return { name: `${(meta[k] || {}).name || k} (${k})`, have: p.have, total: p.total }; });
     const pics = [...bPics];
     for (const k of ids) { try { const s = await loadSet(k); s.cards.filter(c => ownedSet(k)[c.id]).sort((a, b) => (hitRank(a) < 0 ? 9 : hitRank(a)) - (hitRank(b) < 0 ? 9 : hitRank(b))).slice(0, 4).forEach(c => pics.push(c.img)); } catch {} }
-    return drawShare({ title: prefs.trainer ? `${prefs.trainer}'s collection` : 'My collection', sub: `${ids.length} set${ids.length === 1 ? '' : 's'} and the Bounty Board`, pct: rows.length ? rows.reduce((n, r) => n + (r.total ? r.have / r.total : 0), 0) / rows.length * 100 : 0, stats: [[cards, 'cards ticked'], [bGot, 'bounties'], [badges, 'badges']], pics, rows });
+    return drawShare({ title: prefs.trainer ? `${prefs.trainer}'s collection` : 'My collection', sub: `${ids.length} set${ids.length === 1 ? '' : 's'} and the Bounty Board`, pct: rows.length ? rows.reduce((n, r) => n + (r.total ? r.have / r.total : 0), 0) / rows.length * 100 : 0, stats: [[cards, 'cards ticked'], [bGot, 'bounties'], [badges, 'badges']], pics, rows, foot: `Bounty ${berry(bountyM())}` });
   }
   const s = await loadSet(target); const o = ownedSet(target); const mode = prefs.modes[target] || 'set';
   const list = s.cards.filter(c => mode === 'master' || !c.variant); const have = list.filter(c => o[c.id]);
@@ -774,10 +827,10 @@ async function makeShare(target) {
 }
 function openSharePicker(start) {
   const ids = collectingIds();
-  const opts = [{ k: 'all', name: 'Everything', sub: 'All your sets and the Bounty Board' }, { k: 'board', name: 'Bounty Board', sub: 'Your claimed characters' }, ...ids.map(k => ({ k, name: (meta[k] || {}).name || k, sub: `${k} – ${progressOf(k).have} of ${progressOf(k).total}` }))];
+  const opts = [{ k: 'poster', name: 'My WANTED poster', sub: `Bounty ${berry(bountyM())}` }, { k: 'all', name: 'Everything', sub: 'All your sets and the Bounty Board' }, { k: 'board', name: 'Bounty Board', sub: 'Your claimed characters' }, ...ids.map(k => ({ k, name: (meta[k] || {}).name || k, sub: `${k} – ${progressOf(k).have} of ${progressOf(k).total}` }))];
   if (!opts.some(o => o.k === start)) opts.push({ k: start, name: (meta[start] || {}).name || start, sub: 'This set' });
   const sh = openSheet(`<div class="detail share-detail"><h2>Share a picture</h2><p class="muted">Pick what to show. Your best cards go in the picture.</p>
-    <div class="share-opts">${opts.map(o => `<button type="button" class="share-opt" data-share="${esc(o.k)}" aria-pressed="${o.k === start}"><span class="so-art">${o.k === 'all' ? '🗺️' : o.k === 'board' ? '📜' : setArt({ id: o.k })}</span><span class="so-txt"><b>${esc(o.name)}</b><span class="muted">${esc(o.sub)}</span></span></button>`).join('')}</div>
+    <div class="share-opts">${opts.map(o => `<button type="button" class="share-opt" data-share="${esc(o.k)}" aria-pressed="${o.k === start}"><span class="so-art">${o.k === 'poster' ? '💰' : o.k === 'all' ? '🗺️' : o.k === 'board' ? '📜' : setArt({ id: o.k })}</span><span class="so-txt"><b>${esc(o.name)}</b><span class="muted">${esc(o.sub)}</span></span></button>`).join('')}</div>
     <div id="sharePreview"></div></div>`);
   let token = 0, cur = null;
   const preview = async k => {
