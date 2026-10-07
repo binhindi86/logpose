@@ -87,3 +87,12 @@ img.broken{opacity:.15!important}
 .settings .panel .btn{margin-top:6px}
 .btn.danger{color:#ff9aa6}
 .panel.warn{border:2px solid var(--thunder)}
+
+/* One Piece marks: straw hat logo, ship's wheel spinner (replaces the old round marks) */
+.compass{border-radius:0;background:url(hat.svg) center/contain no-repeat;box-shadow:none!important;width:34px;height:34px}
+.compass::after{display:none}
+.compass.big{width:110px;height:110px}
+.compass.huge{width:150px;height:150px;filter:drop-shadow(0 16px 30px rgba(0,0,0,.5));animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-8px) rotate(-4deg)}}
+.spin{border:0!important;border-radius:0;background:url(wheel.svg) center/contain no-repeat!important}
+.rv-back .compass{width:120px;height:120px}
