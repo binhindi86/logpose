@@ -404,7 +404,7 @@ async function renderSet(id, setId) {
     if (m && m.dataset.mode !== S.mode) { S.mode = m.dataset.mode; prefs.modes[setId] = S.mode; savePrefs(); buzz(); paintControls(); paintGrid(); paintTally(false); S.paintBinder && S.paintBinder(); }
     if (f && f.dataset.filter !== S.filter) { S.filter = f.dataset.filter; paintControls(); paintGrid(); }
   };
-  $('#cardSearch').oninput = e => { S.q = e.target.value.trim(); paintGrid(); };
+  let jt; $('#cardSearch').oninput = e => { S.q = e.target.value.trim(); if (prefs.view === 'binder') { clearTimeout(jt); jt = setTimeout(() => binderJump($('#binderBox'), items(), k => openCard(items()[k].card), cover(), S.q, it => it.card.base + ' ' + (it.card.label || '')), 450); } else paintGrid(); };
   $('#grid').onclick = e => {
     const b = e.target.closest('[data-act]'); if (!b) return;
     const c = set.cards.find(x => x.id === b.closest('.tile').dataset.id); if (!c) return;
@@ -420,7 +420,7 @@ async function renderSet(id, setId) {
   const paintView = () => {
     const b = prefs.view === 'binder';
     view.querySelectorAll('[data-view]').forEach(x => x.setAttribute('aria-pressed', String((x.dataset.view === 'binder') === b)));
-    $('#grid').hidden = b; $('#cardSearch').closest('.search').hidden = b; view.querySelector('.controls [aria-label="Show"]').hidden = b; $('#hits').hidden = b; $('#binderBox').hidden = !b;
+    $('#grid').hidden = b; $('#cardSearch').placeholder = b ? 'Find a card in this binder' : 'Find a card by name or number'; view.querySelector('.controls [aria-label="Show"]').hidden = b; $('#hits').hidden = b; $('#binderBox').hidden = !b;
     if (b) { renderBinder($('#binderBox'), items(), k => openCard(items()[k].card), 0, cover()); $('#legend').textContent = 'Binder: cards in set order. Tap a pocket to see the card and exactly where it goes.'; }
     else paintControls();
   };
@@ -444,7 +444,15 @@ function paintHits() {
 const BINDER_SIZES = { 4: [2, 2], 9: [3, 3], 12: [3, 4], 16: [4, 4] };
 const binderSize = () => BINDER_SIZES[prefs.binderSize] ? prefs.binderSize : 9;
 function binderPos(index) { const size = binderSize(), [cols] = BINDER_SIZES[size]; const page = Math.floor(index / size) + 1, inPage = index % size; return { page, sheet: Math.ceil(page / 2), side: page % 2 ? 'front' : 'back', row: Math.floor(inPage / cols) + 1, col: inPage % cols + 1 }; }
-function renderBinder(box, items, onTap, startPage, cover) {
+const matchCard = (q, name, code) => { q = q.toLowerCase().trim(); if (!q) return false; return name.toLowerCase().includes(q) || code.toLowerCase().includes(q) || code.toLowerCase().endsWith('-' + q.padStart(3, '0')); };
+function binderJump(box, items, onTap, cover, q, codeOf) {
+  if (!q.trim()) return;
+  const i = items.findIndex(it => matchCard(q, it.name || '', codeOf(it)));
+  if (i < 0) { toast(`Nothing matches “${q}” in this binder`); return; }
+  const p = binderPos(i); renderBinder(box, items, onTap, p.page, cover, i);
+  toast(`${items[i].name}: page ${p.page}, row ${p.row}, slot ${p.col}`);
+}
+function renderBinder(box, items, onTap, startPage, cover, hl) {
   const size = binderSize(), [cols, rows] = BINDER_SIZES[size];
   const pages = []; for (let i = 0; i < items.length; i += size) pages.push(items.slice(i, i + size));
   const haveCount = items.filter(x => x.have).length;
@@ -453,7 +461,7 @@ function renderBinder(box, items, onTap, startPage, cover) {
   const pageHTML = n => {
     if (n === 0) return `<section class="bcover" data-cover="1"><div class="bc-in">${cover.logo ? `<img src="${esc(cover.logo)}" alt="" class="bc-card">` : '<span class="compass big" aria-hidden="true"></span>'}<h3>${esc(cover.title)}</h3><p>${haveCount} of ${items.length} in place</p><span class="bc-open">Tap or swipe to open</span></div></section>`;
     const pg = pages[n - 1] || [], base = (n - 1) * size;
-    return `<section class="bpage"><div class="bsheet">${pg.map((it, j) => `<button type="button" class="bslot${it.have ? ' have' : ''}${it.soft ? ' soft' : ''}" data-bk="${base + j}" aria-label="${esc(it.name)} ${esc(it.label)}">${it.pic ? `<img decoding="async" src="${esc(it.pic)}" alt="">` : ''}<span class="blabel">${esc(it.label)}</span>${it.have ? '' : `<span class="bname">${esc(it.name)}</span>`}</button>`).join('')}${Array.from({ length: size - pg.length }, () => '<span class="bslot blank"></span>').join('')}</div>
+    return `<section class="bpage"><div class="bsheet">${pg.map((it, j) => `<button type="button" class="bslot${it.have ? ' have' : ''}${it.soft ? ' soft' : ''}${base + j === hl ? ' hl' : ''}" data-bk="${base + j}" aria-label="${esc(it.name)} ${esc(it.label)}">${it.pic ? `<img decoding="async" src="${esc(it.pic)}" alt="">` : ''}<span class="blabel">${esc(it.label)}</span>${it.have ? '' : `<span class="bname">${esc(it.name)}</span>`}</button>`).join('')}${Array.from({ length: size - pg.length }, () => '<span class="bslot blank"></span>').join('')}</div>
       <div class="bfoot">Page ${n} – sheet ${Math.ceil(n / 2)} ${n % 2 ? 'front' : 'back'}${pg.length ? ` – ${esc(pg[0].label)} to ${esc(pg[pg.length - 1].label)}` : ''}</div></section>`;
   };
   box.innerHTML = `<div class="btools"><div class="seg" role="group" aria-label="Pockets per page">${Object.keys(BINDER_SIZES).map(n => `<button type="button" data-bsize="${n}" aria-pressed="${+n === size}">${n}</button>`).join('')}</div><span class="bcount">${haveCount} of ${items.length} in place</span></div>
@@ -644,6 +652,7 @@ async function renderBoard(id) {
     <div class="dex-hero"><div><h1>Bounty Board</h1><p class="muted">Claim one special card for every character: an alt art, parallel, SP, manga or secret rare. ${BOARD.length} characters are wanted.</p></div>${ring(got / BOARD.length * 100, true)}</div>
     <div class="stats"><div class="stat hot"><b>${got}</b><span>claimed</span></div><div class="stat"><b>${way}</b><span>on the way</span></div><div class="stat"><b>${plan}</b><span>planned</span></div></div>
     <div class="set-actions"><div class="seg view-seg" role="group" aria-label="View"><button type="button" data-bview="grid">Posters</button><button type="button" data-bview="binder">Binder</button></div><button type="button" class="track-btn" id="shareBoardBtn">Share</button></div>
+    <label class="search" id="boardBinderFind" hidden><svg viewBox="0 0 24 24" width="20" height="20"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M15.5 15.5L20 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg><input id="boardBinderSearch" type="search" placeholder="Find a character in this binder" autocomplete="off" aria-label="Find a character in the binder"></label>
     <section id="boardBinder" class="binder-box" hidden></section>
     <div class="board-tools">
       <div class="controls dex-controls"><div class="seg" role="group" aria-label="Show"><button type="button" data-bf="all">All</button><button type="button" data-bf="need">Wanted</button><button type="button" data-bf="picked">Planned</button><button type="button" data-bf="ordered">On way</button><button type="button" data-bf="got">Claimed</button></div></div>
@@ -660,11 +669,12 @@ async function renderBoard(id) {
     const L = list(); $('#boardCount').textContent = `${L.length} characters`; $('#boardGrid').innerHTML = L.map(tile).join('');
   };
   const items = () => BOARD.map(e => { const a = board[e.name] || {}; return { e, pic: boardPic(e) || e.opts[0].img, have: a.st === 'got', soft: a.st && a.st !== 'got', label: e.name.split(' ').pop(), name: e.name }; });
-  const paintV = () => { const b = prefs.boardView === 'binder'; view.querySelectorAll('[data-bview]').forEach(x => x.setAttribute('aria-pressed', String((x.dataset.bview === 'binder') === b))); view.querySelector('.board-tools').hidden = b; $('#boardBinder').hidden = !b; if (b) renderBinder($('#boardBinder'), items(), k => openBoardSheet(items()[k].e), 0, { title: 'Bounty Board', logo: '' }); };
+  const paintV = () => { const b = prefs.boardView === 'binder'; view.querySelectorAll('[data-bview]').forEach(x => x.setAttribute('aria-pressed', String((x.dataset.bview === 'binder') === b))); view.querySelector('.board-tools').hidden = b; $('#boardBinder').hidden = !b; $('#boardBinderFind').hidden = !b; if (b) renderBinder($('#boardBinder'), items(), k => openBoardSheet(items()[k].e), 0, { title: 'Bounty Board', logo: '' }); };
   view.querySelector('.view-seg').onclick = e => { const b = e.target.closest('[data-bview]'); if (b) { prefs.boardView = b.dataset.bview; savePrefs(); buzz(); paintV(); } };
   view.querySelector('.dex-controls').onclick = e => { const b = e.target.closest('[data-bf]'); if (b) { BX.filter = b.dataset.bf; paint(); } };
   view.querySelector('.gens').onclick = e => { const b = e.target.closest('[data-color]'); if (b) { BX.color = b.dataset.color; paint(); } };
   $('#boardSearch').oninput = e => { BX.q = e.target.value.trim(); paint(); };
+  let bj; $('#boardBinderSearch').oninput = e => { const q = e.target.value; clearTimeout(bj); bj = setTimeout(() => binderJump($('#boardBinder'), items(), k => openBoardSheet(items()[k].e), { title: 'Bounty Board', logo: '' }, q, () => ''), 450); };
   $('#boardGrid').onclick = e => { const b = e.target.closest('[data-char]'); if (b) openBoardSheet(BOARD.find(x => x.name === b.dataset.char)); };
   $('#shareBoardBtn').onclick = () => openSharePicker('board');
   BX.repaint = () => { if (parse().name !== 'board') return; paint(); if (prefs.boardView === 'binder') { const box = $('#boardBinder'); renderBinder(box, items(), k => openBoardSheet(items()[k].e), box._page ?? 1, { title: 'Bounty Board', logo: '' }); } };
@@ -847,6 +857,43 @@ function openSharePicker(start) {
   sh.onclick = e => { const b = e.target.closest('[data-share]'); if (b) { buzz(); preview(b.dataset.share); } };
   preview(start);
 }
+
+/* ---------- Search everything ---------- */
+let ALL = null;
+async function loadAllCards() {
+  if (ALL) return ALL;
+  const sets = await catalog();
+  const lists = await pool(sets.map(s => async () => { try { return (await loadSet(s.id)).cards.map(c => ({ c, setId: s.id, setName: s.name })); } catch { return []; } }), 4);
+  ALL = lists.flat(); return ALL;
+}
+function openSearch() {
+  const sh = openSheet(`<div class="detail search-detail"><h2>Search</h2>
+    <label class="search big-search"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M15.5 15.5L20 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+      <input id="gSearch" type="search" placeholder="A character, card name or code like OP13-118" autocomplete="off" aria-label="Search all cards"></label>
+    <div id="gOut"><p class="muted">Search every set, your binder and the Bounty Board at once.</p></div></div>`);
+  const inp = $('#gSearch'); setTimeout(() => inp.focus(), 50);
+  let t, token = 0;
+  const run = async q => {
+    const tk = ++token, out = $('#gOut');
+    if (q.length < 2) { out.innerHTML = '<p class="muted">Type at least 2 letters.</p>'; return; }
+    if (!ALL) out.innerHTML = loading('Loading every set the first time…');
+    let all = [], bd = [];
+    try { all = await loadAllCards(); } catch {}
+    try { bd = await loadBoard(); } catch {}
+    if (tk !== token) return;
+    const chars = bd.filter(e => e.name.toLowerCase().includes(q.toLowerCase())).slice(0, 12);
+    const cards = all.filter(x => matchCard(q, x.c.name, x.c.base + ' ' + x.c.label + ' ' + x.setName));
+    cards.sort((a, b) => (!!ownedSet(b.setId)[b.c.id] - !!ownedSet(a.setId)[a.c.id]) || ((hitRank(a.c) < 0 ? 9 : hitRank(a.c)) - (hitRank(b.c) < 0 ? 9 : hitRank(b.c))));
+    out.innerHTML = `${chars.length ? `<div class="panel"><h3>Bounty Board <span class="count">${chars.length}</span></h3><div class="rail">${chars.map(e => { const st = (board[e.name] || {}).st || ''; const pic = boardPic(e) || e.opts[0].img; return `<button type="button" class="chase" data-gchar="${esc(e.name)}"><div class="pic${st === 'got' ? ' have' : ''}"><img loading="lazy" src="${esc(pic)}" alt=""></div><div class="nm">${st === 'got' ? '✓ ' : ''}${esc(e.name)}</div><div class="sub">${BOARD_ST[st]}</div></button>`; }).join('')}</div></div>` : ''}
+      <div class="panel"><h3>Cards <span class="count">${cards.length}</span></h3>${cards.length ? `<div class="gres">${cards.slice(0, 60).map(x => { const own = !!ownedSet(x.setId)[x.c.id]; return `<button type="button" class="gr${own ? ' own' : ''}" data-gcard="${esc(x.c.id)}" data-gset="${esc(x.setId)}"><img loading="lazy" src="${esc(x.c.img)}" alt=""><span><b>${own ? '✓ ' : ''}${esc(x.c.name)}</b><span class="muted">${esc(x.c.base)}${x.c.label ? ' – ' + esc(x.c.label) : ''}</span><span class="muted">${esc(x.setName)}${own ? ' – in my binder' : ''}</span></span></button>`; }).join('')}</div>${cards.length > 60 ? `<p class="muted">Showing the first 60. Type more to narrow it down.</p>` : ''}` : '<p class="muted">No cards match.</p>'}</div>`;
+  };
+  inp.oninput = () => { clearTimeout(t); t = setTimeout(() => run(inp.value.trim()), 250); };
+  sh.onclick = e => {
+    const c = e.target.closest('[data-gcard]'); if (c) { openAfterLoad = c.dataset.gcard; closeSheet(); go('#/set/' + encodeURIComponent(c.dataset.gset)); return; }
+    const ch = e.target.closest('[data-gchar]'); if (ch) { const en = (BOARD || []).find(x => x.name === ch.dataset.gchar); if (en) openBoardSheet(en); }
+  };
+}
+$('#findBtn').onclick = openSearch;
 
 /* ---------- Settings, backup, welcome ---------- */
 const KEYS = ['lp.owned', 'lp.board', 'lp.chase', 'lp.meta', 'lp.prefs'];

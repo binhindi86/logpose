@@ -180,3 +180,17 @@ img.broken{opacity:.15!important}
 .btn.danger{color:#ff9aa6}
 .panel.warn{border:2px solid var(--thunder)}
 .share-opt[aria-pressed=true]{border-color:var(--thunder);background:linear-gradient(160deg,#6a3420,#3d1f12)}
+
+/* search */
+#findBtn{margin-left:auto}
+#findBtn + #setBtn{margin-left:8px}
+.big-search input{font-size:17px;padding:14px 16px 14px 46px}
+.gres{display:grid;gap:8px}
+.gr{display:flex;gap:12px;align-items:center;text-align:left;padding:8px;border-radius:12px;background:#2e170e;border:1px solid var(--line);color:inherit}
+.gr img{width:54px;aspect-ratio:63/88;object-fit:cover;border-radius:5px;flex:none}
+.gr span{display:grid;gap:2px;min-width:0}
+.gr b{font:600 15px Fredoka,sans-serif}
+.gr .muted{font-size:12.5px;font-weight:700}
+.gr.own{border-color:var(--thunder)}
+.bslot.hl{box-shadow:0 0 0 3px var(--thunder),0 0 24px rgba(244,200,74,.8)!important;animation:hlp 1s ease-in-out 3}
+@keyframes hlp{50%{transform:scale(1.06)}}
